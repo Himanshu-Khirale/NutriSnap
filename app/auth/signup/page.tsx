@@ -19,10 +19,34 @@ export default function SignUpPage() {
     confirmPassword: "",
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle signup logic here
-    console.log("Signup attempt:", formData)
+    if (formData.password !== formData.confirmPassword) {
+      alert("Passwords don't match")
+      return
+    }
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        localStorage.setItem("token", data.token)
+        localStorage.setItem("user", JSON.stringify(data.user))
+        window.location.href = "/dashboard"
+      } else {
+        alert(data.error || "Signup failed")
+      }
+    } catch (error) {
+      console.error("Signup error:", error)
+      alert("Signup failed")
+    }
   }
 
   return (

@@ -9,115 +9,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trophy, Star, Target, Award, Crown } from "lucide-react"
+import { useEffect, useState } from "react"
+import { getAuthHeaders } from "@/lib/auth"
 
-// Mock gamification data
-const mockGameData = {
-  totalPoints: 2450,
-  currentLevel: 8,
-  nextLevelPoints: 2800,
-  currentStreak: 12,
-  longestStreak: 28,
-  achievements: [
-    {
-      id: 1,
-      title: "First Steps",
-      description: "Log your first meal",
-      icon: "🥗",
-      unlocked: true,
-      unlockedDate: "2024-01-15",
-      points: 50,
-      category: "milestone",
-    },
-    {
-      id: 2,
-      title: "Streak Master",
-      description: "Maintain a 7-day logging streak",
-      icon: "🔥",
-      unlocked: true,
-      unlockedDate: "2024-01-22",
-      points: 200,
-      category: "streak",
-    },
-    {
-      id: 3,
-      title: "Nutrition Scholar",
-      description: "Achieve 10 meals with 80+ nutrition score",
-      icon: "🎓",
-      unlocked: true,
-      unlockedDate: "2024-02-01",
-      points: 300,
-      category: "nutrition",
-    },
-    {
-      id: 4,
-      title: "Veggie Lover",
-      description: "Log 20 meals with vegetables",
-      icon: "🥬",
-      unlocked: true,
-      unlockedDate: "2024-02-10",
-      points: 150,
-      category: "nutrition",
-    },
-    {
-      id: 5,
-      title: "Protein Power",
-      description: "Meet protein goals for 14 consecutive days",
-      icon: "💪",
-      unlocked: false,
-      progress: 8,
-      total: 14,
-      points: 250,
-      category: "nutrition",
-    },
-    {
-      id: 6,
-      title: "Century Club",
-      description: "Log 100 meals",
-      icon: "💯",
-      unlocked: false,
-      progress: 67,
-      total: 100,
-      points: 500,
-      category: "milestone",
-    },
-    {
-      id: 7,
-      title: "Perfect Week",
-      description: "Score 90+ on all meals for a week",
-      icon: "⭐",
-      unlocked: false,
-      progress: 0,
-      total: 7,
-      points: 400,
-      category: "nutrition",
-    },
-    {
-      id: 8,
-      title: "Consistency King",
-      description: "Maintain a 30-day streak",
-      icon: "👑",
-      unlocked: false,
-      progress: 12,
-      total: 30,
-      points: 600,
-      category: "streak",
-    },
-  ],
-  recentActivity: [
-    { action: "Earned 'Veggie Lover' badge", points: 150, date: "2 days ago" },
-    { action: "Completed 10-day streak", points: 100, date: "3 days ago" },
-    { action: "Perfect nutrition score meal", points: 25, date: "5 days ago" },
-  ],
-}
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
 export default function AchievementsPage() {
-  const unlockedAchievements = mockGameData.achievements.filter((a) => a.unlocked)
-  const lockedAchievements = mockGameData.achievements.filter((a) => !a.unlocked)
+  const [overview, setOverview] = useState<any | null>(null)
+  const [achievements, setAchievements] = useState<any[]>([])
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await fetch(`${API_URL}/api/gamification/overview`, { headers: getAuthHeaders() }).then((r) => r.json())
+        setOverview(data)
+        setAchievements(data.achievements || [])
+      } catch (e) {
+        console.error(e)
+      }
+    }
+    load()
+  }, [])
+
+  const unlockedAchievements = achievements.filter((a) => a.unlocked)
+  const lockedAchievements = achievements.filter((a) => !a.unlocked)
 
   const achievementsByCategory = {
-    milestone: mockGameData.achievements.filter((a) => a.category === "milestone"),
-    nutrition: mockGameData.achievements.filter((a) => a.category === "nutrition"),
-    streak: mockGameData.achievements.filter((a) => a.category === "streak"),
+    milestone: achievements.filter((a) => a.category === "milestone"),
+    nutrition: achievements.filter((a) => a.category === "nutrition"),
+    streak: achievements.filter((a) => a.category === "streak"),
   }
 
   return (
@@ -133,13 +53,15 @@ export default function AchievementsPage() {
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <PointsDisplay points={mockGameData.totalPoints} />
+          {overview && <PointsDisplay points={overview.totalPoints} />}
           <LevelProgress
-            currentLevel={mockGameData.currentLevel}
-            currentPoints={mockGameData.totalPoints}
-            nextLevelPoints={mockGameData.nextLevelPoints}
+            currentLevel={overview?.currentLevel || 0}
+            currentPoints={overview?.totalPoints || 0}
+            nextLevelPoints={overview?.nextLevelPoints || 0}
           />
-          <StreakCounter currentStreak={mockGameData.currentStreak} longestStreak={mockGameData.longestStreak} />
+          {overview && (
+            <StreakCounter currentStreak={overview.currentStreak} longestStreak={overview.longestStreak} />
+          )}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Badges Earned</CardTitle>
@@ -148,7 +70,7 @@ export default function AchievementsPage() {
             <CardContent>
               <div className="text-2xl font-bold">{unlockedAchievements.length}</div>
               <p className="text-xs text-muted-foreground">
-                {mockGameData.achievements.length - unlockedAchievements.length} more to unlock
+                {achievements.length - unlockedAchievements.length} more to unlock
               </p>
             </CardContent>
           </Card>
@@ -214,16 +136,16 @@ export default function AchievementsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {mockGameData.recentActivity.map((activity, index) => (
+                {(overview?.achievements || []).slice(0, 3).map((a, index) => (
                   <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                     <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium">{activity.action}</p>
+                      <p className="text-sm font-medium">Earned '{a.title}'</p>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline" className="text-xs">
-                          +{activity.points} pts
+                          +{a.points} pts
                         </Badge>
-                        <span className="text-xs text-muted-foreground">{activity.date}</span>
+                        <span className="text-xs text-muted-foreground">recently</span>
                       </div>
                     </div>
                   </div>
@@ -238,7 +160,7 @@ export default function AchievementsPage() {
                   <Crown className="w-5 h-5 text-yellow-500" />
                   Next Level Rewards
                 </CardTitle>
-                <CardDescription>Level {mockGameData.currentLevel + 1} unlocks</CardDescription>
+                <CardDescription>Level {(overview?.currentLevel || 0) + 1} unlocks</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">

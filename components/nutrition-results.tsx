@@ -28,9 +28,10 @@ interface NutritionData {
 
 interface NutritionResultsProps {
   data: NutritionData
+  onSave?: () => Promise<void> | void
 }
 
-export function NutritionResults({ data }: NutritionResultsProps) {
+export function NutritionResults({ data, onSave }: NutritionResultsProps) {
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600"
     if (score >= 60) return "text-yellow-600"
@@ -172,7 +173,7 @@ export function NutritionResults({ data }: NutritionResultsProps) {
       </Card>
 
       {/* Save Meal Button */}
-      <Button className="w-full" size="lg">
+      <Button className="w-full" size="lg" onClick={onSave}>
         <Save className="w-4 h-4 mr-2" />
         Save to Meal History
       </Button>

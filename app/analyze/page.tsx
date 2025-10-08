@@ -6,49 +6,44 @@ import { PhotoUpload } from "@/components/photo-upload"
 import { NutritionResults } from "@/components/nutrition-results"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Camera, Sparkles, Star, TrendingUp } from "lucide-react"
+import { getAuthHeaders } from "@/lib/auth"
 
-// Mock nutrition data for demonstration
-const mockNutritionData = {
-  foods: [
-    { name: "Grilled Chicken Breast", portion: "150g" },
-    { name: "Brown Rice", portion: "100g" },
-    { name: "Steamed Broccoli", portion: "80g" },
-  ],
-  nutrition: {
-    calories: 420,
-    protein: 35,
-    carbs: 45,
-    fat: 8,
-    fiber: 6,
-    sugar: 3,
-  },
-  score: 85,
-  recommendations: [
-    "Great protein source! Consider adding healthy fats like avocado.",
-    "Excellent fiber content from the broccoli.",
-    "Well-balanced macronutrient distribution.",
-  ],
-  alternatives: [
-    { current: "Brown Rice", suggestion: "Quinoa", benefit: "+2g protein, +1g fiber" },
-    { current: "Steamed Broccoli", suggestion: "Roasted Brussels Sprouts", benefit: "+vitamin K" },
-  ],
-}
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default function AnalyzePage() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [results, setResults] = useState<typeof mockNutritionData | null>(null)
+  const [results, setResults] = useState<any | null>(null)
+  const [mealId, setMealId] = useState<string | null>(null)
 
-  const handleImageUpload = useCallback((imageUrl: string) => {
+  const handleImageUpload = useCallback(async (imageUrl: string) => {
     setUploadedImage(imageUrl)
     setIsAnalyzing(true)
     setResults(null)
+    setMealId(null)
 
-    // Simulate AI analysis delay
-    setTimeout(() => {
+    try {
+      const res = await fetch(`${API_URL}/api/meals/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ imageBase64: imageUrl }),
+      })
+      if (!res.ok) throw new Error("Analyze failed")
+      const data = await res.json()
+      setResults({
+        foods: data.foods,
+        nutrition: data.nutrition,
+        score: data.score,
+        recommendations: data.recommendations || [],
+        alternatives: data.alternatives || [],
+      })
+      setMealId(data.mealId || null)
+      setUploadedImage(data.imageUrl || imageUrl)
+    } catch (e) {
+      console.error(e)
+    } finally {
       setIsAnalyzing(false)
-      setResults(mockNutritionData)
-    }, 3000)
+    }
   }, [])
 
   const handleReset = useCallback(() => {
@@ -150,7 +145,31 @@ export default function AnalyzePage() {
               </Card>
             )}
 
-            {results && <NutritionResults data={results} />}
+            {results && (
+              <NutritionResults
+                data={results}
+                onSave={async () => {
+                  try {
+                    // if already saved via analyze, do nothing
+                    if (mealId) return
+                    await fetch(`${API_URL}/api/meals/save`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+                      body: JSON.stringify({
+                        meal: {
+                          imageUrl: uploadedImage,
+                          foods: results.foods,
+                          nutrition: results.nutrition,
+                          score: results.score,
+                        },
+                      }),
+                    })
+                  } catch (e) {
+                    console.error(e)
+                  }
+                }}
+              />
+            )}
           </div>
         </div>
       </div>
