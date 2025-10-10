@@ -6,6 +6,7 @@ const { authenticateToken } = require("../middleware/auth");
 
 const router = express.Router();
 const { analyzeFoodImageBase64 } = require("../services/gemini");
+const Achievement = require("../models/Achievement");
 
 // naive image upload: accepts base64 dataUrl or public URL
 router.post("/analyze", authenticateToken, async (req, res) => {
@@ -65,6 +66,24 @@ router.post("/analyze", authenticateToken, async (req, res) => {
       score,
     });
 
+    // Unlock first-meal achievement if this is their first meal
+    const userMealCount = await Meal.countDocuments({ userId });
+    if (userMealCount === 1) {
+      const existing = await Achievement.findOne({ userId, title: "First Steps" });
+      if (!existing) {
+        await Achievement.create({
+          userId,
+          title: "First Steps",
+          description: "Log your first meal",
+          icon: "🥗",
+          unlocked: true,
+          unlockedDate: new Date().toISOString(),
+          points: 50,
+          category: "milestone",
+        });
+      }
+    }
+
     // Emit real-time update
     const io = req.app.get("io");
     if (io) {
@@ -74,6 +93,7 @@ router.post("/analyze", authenticateToken, async (req, res) => {
         nutrition: meal.nutrition,
         score: meal.score,
       });
+      io.to(`user-${userId}`).emit("achievement-updated", { refresh: true });
     }
 
     res.json({

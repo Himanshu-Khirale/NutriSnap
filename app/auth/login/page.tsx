@@ -16,14 +16,21 @@ export default function LoginPage() {
     email: "",
     password: "",
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      setErrorMessage("")
+      setIsSubmitting(true)
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          email: formData.email.trim(),
+          password: formData.password,
+        }),
       })
       const data = await res.json()
       if (res.ok) {
@@ -31,11 +38,14 @@ export default function LoginPage() {
         localStorage.setItem("user", JSON.stringify(data.user))
         window.location.href = "/dashboard"
       } else {
-        alert(data.error || "Login failed")
+        const backendError = Array.isArray(data.errors) && data.errors.length > 0 ? data.errors[0].msg : data.error
+        setErrorMessage(backendError || "Login failed")
       }
     } catch (error) {
       console.error("Login error:", error)
-      alert("Login failed")
+      setErrorMessage("Login failed. Please try again.")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -73,6 +83,11 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <form onSubmit={handleSubmit} className="space-y-5">
+              {errorMessage && (
+                <div className="text-red-600 text-sm font-medium bg-red-50 border border-red-200 rounded p-2">
+                  {errorMessage}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-gray-700 font-medium">
                   Email
@@ -139,8 +154,9 @@ export default function LoginPage() {
                 type="submit"
                 className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
                 size="lg"
+                disabled={isSubmitting}
               >
-                Sign In
+                {isSubmitting ? "Signing in..." : "Sign In"}
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </form>

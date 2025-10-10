@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trophy, Star, Target, Award, Crown } from "lucide-react"
 import { useEffect, useState } from "react"
+import { io, type Socket } from "socket.io-client"
 import { getAuthHeaders } from "@/lib/auth"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
@@ -19,6 +20,8 @@ export default function AchievementsPage() {
   const [achievements, setAchievements] = useState<any[]>([])
 
   useEffect(() => {
+    let timer: any
+    let socket: Socket | null = null
     const load = async () => {
       try {
         const data = await fetch(`${API_URL}/api/gamification/overview`, { headers: getAuthHeaders() }).then((r) => r.json())
@@ -28,7 +31,43 @@ export default function AchievementsPage() {
         console.error(e)
       }
     }
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        load()
+      }
+    }
+
     load()
+    timer = setInterval(load, 15000)
+
+    // Realtime via socket.io
+    try {
+      socket = io(API_URL, { transports: ["websocket"], autoConnect: true })
+      // Join user room after we know the user id via /me
+      fetch(`${API_URL}/api/auth/me`, { headers: getAuthHeaders() })
+        .then((r) => r.json())
+        .then((me) => {
+          if (me?.id) {
+            socket?.emit("join-user", me.id)
+          }
+        })
+        .catch(() => {})
+
+      socket.on("achievement-updated", () => {
+        load()
+      })
+    } catch (e) {
+      // ignore socket failures; polling still works
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => {
+      if (timer) clearInterval(timer)
+      if (socket) {
+        try { socket.disconnect() } catch {}
+      }
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
   }, [])
 
   const unlockedAchievements = achievements.filter((a) => a.unlocked)
