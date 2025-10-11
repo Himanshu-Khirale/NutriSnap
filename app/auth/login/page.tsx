@@ -18,9 +18,63 @@ export default function LoginPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
+  const [validationErrors, setValidationErrors] = useState({
+    email: "",
+    password: "",
+  })
+
+  // Validation functions
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!email.trim()) return "Email is required"
+    if (!emailRegex.test(email)) return "Please enter a valid email address"
+    return ""
+  }
+
+  const validatePassword = (password: string) => {
+    if (!password) return "Password is required"
+    if (password.length < 6) return "Password must be at least 6 characters"
+    return ""
+  }
+
+  const validateForm = () => {
+    const emailError = validateEmail(formData.email)
+    const passwordError = validatePassword(formData.password)
+    
+    setValidationErrors({
+      email: emailError,
+      password: passwordError,
+    })
+    
+    return !emailError && !passwordError
+  }
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData({ ...formData, [field]: value })
+    
+    // Clear validation error when user starts typing
+    if (validationErrors[field as keyof typeof validationErrors]) {
+      setValidationErrors({ ...validationErrors, [field]: "" })
+    }
+  }
+
+  const handleBlur = (field: string) => {
+    if (field === "email") {
+      const error = validateEmail(formData.email)
+      setValidationErrors({ ...validationErrors, email: error })
+    } else if (field === "password") {
+      const error = validatePassword(formData.password)
+      setValidationErrors({ ...validationErrors, password: error })
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!validateForm()) {
+      return
+    }
+    
     try {
       setErrorMessage("")
       setIsSubmitting(true)
@@ -98,12 +152,18 @@ export default function LoginPage() {
                     id="email"
                     type="email"
                     placeholder="Enter your email"
-                    className="pl-11 h-12 border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500/20 bg-emerald-50/50"
+                    className={`pl-11 h-12 border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500/20 bg-emerald-50/50 ${
+                      validationErrors.email ? "border-red-300 focus:border-red-500 focus:ring-red-500/20" : ""
+                    }`}
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    onBlur={() => handleBlur("email")}
                     required
                   />
                 </div>
+                {validationErrors.email && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -116,9 +176,12 @@ export default function LoginPage() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
-                    className="pl-11 pr-11 h-12 border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500/20 bg-emerald-50/50"
+                    className={`pl-11 pr-11 h-12 border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500/20 bg-emerald-50/50 ${
+                      validationErrors.password ? "border-red-300 focus:border-red-500 focus:ring-red-500/20" : ""
+                    }`}
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    onBlur={() => handleBlur("password")}
                     required
                   />
                   <button
@@ -129,6 +192,9 @@ export default function LoginPage() {
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
+                {validationErrors.password && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.password}</p>
+                )}
               </div>
 
               <div className="flex items-center justify-between">

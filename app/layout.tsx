@@ -30,6 +30,7 @@ export default function RootLayout({
           {children}
           <Analytics />
         </Suspense>
+        <script src='https://cdn.jotfor.ms/agent/embedjs/0199ce7086de7445a36a79fca4cf03faf2ea/embed.js'></script>
       </body>
     </html>
   )

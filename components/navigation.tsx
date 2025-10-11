@@ -3,13 +3,14 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Camera, BarChart3, Trophy, User, Menu, X } from "lucide-react"
+import { Camera, BarChart3, Trophy, User, Menu, X, ChefHat } from "lucide-react"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
 
   const navItems = [
     { href: "/analyze", label: "Photo Analysis", icon: Camera },
+    { href: "/recipe-generator", label: "Recipe Generator", icon: ChefHat },
     { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
     { href: "/achievements", label: "Achievements", icon: Trophy },
     { href: "/profile", label: "Profile", icon: User },

@@ -10,6 +10,7 @@ const statsRouter = require("./routes/stats");
 const usersRouter = require("./routes/users");
 const gamificationRouter = require("./routes/gamification");
 const authRouter = require("./routes/auth");
+const recipeRouter = require("./routes/recipe");
 const { Server } = require("socket.io");
 const http = require("http");
 
@@ -71,6 +72,7 @@ async function start() {
   app.use("/api/stats", statsRouter);
   app.use("/api/users", usersRouter);
   app.use("/api/gamification", gamificationRouter);
+  app.use("/api/recipe", recipeRouter);
 
   // WebSocket for real-time updates
   io.on("connection", (socket) => {
